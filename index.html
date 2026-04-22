@@ -9,21 +9,20 @@
     <style>
         * { box-sizing: border-box; }
         
-        /* Fixed height body to prevent scrolling and fill screen */
         body { 
             display: flex; 
             flex-direction: column; 
             align-items: center; 
             justify-content: space-between;
-            height: 100vh; /* Full viewport height */
-            height: -webkit-fill-available; /* Fix for mobile browser bars */
+            height: 100vh;
+            height: -webkit-fill-available; 
             margin: 0; 
-            background-color: #0c0c0c; /* Matching your screenshot's deep black */
+            background-color: #0c0c0c; 
             color: #f0f0f0; 
             font-family: sans-serif; 
             padding: 20px 10px;
             text-align: center;
-            overflow: hidden; /* Prevents accidental bouncing/scrolling */
+            overflow: hidden; 
         }
 
         html { height: -webkit-fill-available; }
@@ -39,10 +38,9 @@
             justify-content: center;
             flex-grow: 1;
             width: 100%;
-            gap: 5vh; /* Responsive gap based on height */
+            gap: 4vh; 
         }
 
-        /* Container scales based on screen width */
         .dice-container { 
             display: flex; 
             gap: 10px; 
@@ -56,7 +54,7 @@
             flex-direction: column; 
             align-items: center; 
             gap: 8px; 
-            flex: 1; /* Makes all boxes equal width */
+            flex: 1; 
         }
 
         .die-wrapper span { 
@@ -66,10 +64,9 @@
             color: #fff;
         }
 
-        /* Dice size is now responsive to screen width */
         .dice { 
             width: 100%;
-            aspect-ratio: 1 / 1; /* Keeps it square */
+            aspect-ratio: 1 / 1; 
             max-width: 110px; 
             background-color: #2a2a2a; 
             color: #888; 
@@ -130,6 +127,12 @@
         .rolling { animation: shake 0.1s infinite; background-color: #ffcc00 !important; color: #000 !important; }
         @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -1px); } 100% { transform: translate(1px, 1px); } }
         
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
         button { 
             padding: 10px 30px; 
             background: transparent; 
@@ -141,6 +144,13 @@
             font-weight: bold;
             transition: 0.2s;
             letter-spacing: 1px;
+        }
+
+        /* The Install Button - Hidden by default */
+        #install-button {
+            display: none;
+            background: #ffcc00;
+            color: #000;
         }
         
         footer { font-size: 0.6rem; color: #333; margin-bottom: 10px; }
@@ -168,7 +178,11 @@
                 <div id="die-2" class="dice" onclick="rollDice(2)">LOCKED</div>
             </div>
         </div>
-        <button onclick="resetBoard()">RESET</button>
+        
+        <div class="button-group">
+            <button onclick="resetBoard()">RESET</button>
+            <button id="install-button">INSTALL APP</button>
+        </div>
     </div>
 
     <footer>© 2026 AGOS PAYAPA. ALL RIGHTS RESERVED.</footer>
@@ -205,7 +219,6 @@
 
         function rollDice(index) {
             if (index !== currentStep) return;
-
             const dieElement = document.getElementById("die-" + index);
             dieElement.classList.add('rolling');
             dieElement.textContent = "ROLLING...";
@@ -213,26 +226,20 @@
             setTimeout(() => {
                 const pool = dicePools[index];
                 const result = pool[Math.floor(Math.random() * pool.length)];
-                
                 dieElement.textContent = ""; 
                 dieElement.classList.remove('rolling', 'active');
                 dieElement.classList.add('rolled');
-
                 const contentDiv = document.createElement("div");
                 contentDiv.className = "result-content";
-                
                 const img = document.createElement("img");
                 img.src = result.url;
                 img.alt = ""; 
-
                 const label = document.createElement("div");
                 label.className = "result-label";
                 label.textContent = result.name;
-
                 contentDiv.appendChild(img);
                 contentDiv.appendChild(label);
                 dieElement.appendChild(contentDiv);
-
                 currentStep++;
                 if (currentStep < 3) {
                     const nextDie = document.getElementById("die-" + currentStep);
@@ -243,6 +250,39 @@
         }
 
         function resetBoard() { location.reload(); }
+
+        // --- INSTALL LOGIC ---
+        let deferredPrompt;
+        const installBtn = document.getElementById('install-button');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent Chrome 67 and earlier from automatically showing the prompt
+            e.preventDefault();
+            // Stash the event so it can be triggered later.
+            deferredPrompt = e;
+            
+            // Only show the button if NOT running in standalone mode
+            if (!window.matchMedia('(display-mode: standalone)').matches) {
+                installBtn.style.display = 'block';
+            }
+        });
+
+        installBtn.addEventListener('click', (e) => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        installBtn.style.display = 'none';
+                    }
+                    deferredPrompt = null;
+                });
+            }
+        });
+
+        // Hide button if already installed (fallback check)
+        window.addEventListener('appinstalled', () => {
+            installBtn.style.display = 'none';
+        });
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
